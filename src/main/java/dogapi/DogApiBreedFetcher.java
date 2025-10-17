@@ -24,12 +24,53 @@ public class DogApiBreedFetcher implements BreedFetcher {
      * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
      */
     @Override
-    public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+    public List<String> getSubBreeds(String breed) throws BreedNotFoundException {
+
+        try {
+            if (breed == null || breed.isBlank()) {
+                throw new BreedFetcher.BreedNotFoundException("Breed is blank");
+            }
+
+            String url = "https://dog.ceo/api/breed/"
+                    + breed.trim().toLowerCase(Locale.ROOT)
+                    + "/list";
+
+            Request request = new Request.Builder().url(url).build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (response.body() == null) {
+                    throw new BreedFetcher.BreedNotFoundException("Empty API response");
+                }
+
+                String body = response.body().string();
+
+
+                if (!response.isSuccessful()) {
+                    throw new BreedFetcher.BreedNotFoundException("Breed not found: " + breed);
+                }
+
+                JSONObject json = new JSONObject(body);
+                String status = json.optString("status", "");
+
+                if ("success".equalsIgnoreCase(status)) {
+                    JSONArray arr = json.optJSONArray("message");
+                    List<String> result = new ArrayList<>();
+                    if (arr != null) {
+                        for (int i = 0; i < arr.length(); i++) {
+                            result.add(arr.getString(i));
+                        }
+                    }
+                    return result;
+                } else {
+
+                    throw new BreedFetcher.BreedNotFoundException("Breed not found: " + breed);
+                }
+            }
+        } catch (BreedFetcher.BreedNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+
+            throw new BreedFetcher.BreedNotFoundException("Failed to fetch sub-breeds for: " + breed);
+        }
     }
 }
